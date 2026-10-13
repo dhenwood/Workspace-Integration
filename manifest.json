@@ -1,0 +1,67 @@
+{
+  "id": "53bd3407-20b6-4156-8b3e-d7da5059b3c4",
+  "manifestVersion": 1,
+  "displayName": "On Hold Macro",
+  "vendor": "Darren Henwood",
+  "email": "dhenwood@cisco.com",
+  "description": "The On Hold Macro workspace integration enables a Cisco outside Navigator to change to blue along with an On-Hold message to notify people that the room is currently been put on hold by Cisco Spaces and that someone is on there way to the room.",
+  "descriptionUrl": "",
+  "availability": "org_private",
+  "tocUrl": "",
+  "apiAccess": [
+    {
+      "scope": "spark-admin:devices_write",
+      "access": "required"
+    },
+    {
+      "scope": "spark-admin:devices_read",
+      "access": "required"
+    },
+    {
+      "scope": "spark:xapi_commands",
+      "access": "required"
+    }
+  ],
+  "xapiAccess": {
+    "status": [],
+    "commands": [
+      {
+        "path": "UserInterface.LedControl.Color.Set",
+        "access": "required"
+      },
+      {
+        "path": "UserInterface.Branding.Upload",
+        "access": "required"
+      },
+      {
+        "path": "UserInterface.Translation.Override.Set",
+        "access": "required"
+      },
+      {
+        "path": "UserInterface.Translation.Override.Clear",
+        "access": "required"
+      },
+      {
+        "path": "UserInterface.Branding.Delete",
+        "access": "required"
+      },
+      {
+        "path": "UserInterface.Message.Prompt.Clear",
+        "access": "required"
+      }
+    ],
+    "events": [
+      {
+        "path": "UserInterface.Message.Prompt.Display",
+        "access": "required"
+      },
+      {
+        "path": "Bookings.BookingRequested",
+        "access": "required"
+      }
+    ]
+  },
+  "provisioning": {
+    "type": "manual"
+  }
+}
