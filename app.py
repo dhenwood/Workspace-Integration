@@ -8,7 +8,7 @@ from jwt import PyJWKClient
 app = Flask(__name__)
 
 ## JWT details - for healthCheck
-APP_ID = "<appIdRemoved>" # sent inside the health check JWT and all messsages
+APP_ID = "<appIdRemoved>" # sent what integration activated, inside the health check JWT and all messsages
 JWKS_URLS = {
     "us-west-2_r":    "https://xapi-r.wbx2.com/jwks",
     "us-east-2_a":    "https://xapi-a.wbx2.com/jwks",
@@ -24,7 +24,6 @@ def rxMessage():
     data = request.get_json()
     response = processJson(data)
     return response
-
 
 def processJson(message):
     if message.get("type") == "events":               # webhook main events
