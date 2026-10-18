@@ -3,12 +3,16 @@ import logging
 import time
 import jwt
 from jwt import PyJWKClient
+from dotenv import load_dotenv
+import os
+import manageTokens
 
+load_dotenv()
 # Initialize the Flask application
 app = Flask(__name__)
 
 ## JWT details - for healthCheck
-APP_ID = "<appIdRemoved>" # sent what integration activated, inside the health check JWT and all messsages
+APP_ID = "<appId removed>" # sent what integration activated, inside the health check JWT and all messsages
 JWKS_URLS = {
     "us-west-2_r":    "https://xapi-r.wbx2.com/jwks",
     "us-east-2_a":    "https://xapi-a.wbx2.com/jwks",
@@ -19,14 +23,22 @@ DEFAULT_JWKS = JWKS_URLS["us-east-2_a"]
 _jwk_clients = {} 
 
 
+@app.route("/")
+def index():
+    return render_template('index.html')
+
+
 @app.route('/onholdintegration', methods=['POST'])
 def rxMessage():
     data = request.get_json()
+
     response = processJson(data)
     return response
 
+
 def processJson(message):
-    if message.get("type") == "events":               # webhook main events
+    epoch_seconds = time.time()
+    if message.get("type") == "events":         # webhook main events
         processEvent(message)
         return jsonify({"status": "ok"}), 200
 
@@ -36,6 +48,7 @@ def processJson(message):
     if "jwt" in message:                               # actions (healthCheck, update, deprovision)
         claims = verify_jwt(message["jwt"])            # verify signature + appId
         if claims.get("action") == "healthCheck":
+            logToFile("healthCheck\n")
             return jsonify({"operationalState": "operational", "tokensState": "valid"}), 200
         return "", 204
 
@@ -49,11 +62,18 @@ def processEvent(event):
     if key == "UserInterface.Message.Prompt.Display":
         value = event0.get("value")
         title = value.get("Title")
-        # use values to trigger On-Hold process
+        logToFile(f"deviceId: {deviceId} Display title: {title}\n")
+        performCommand("sendMsg")
+
     elif key == "Bookings.BookingRequested":
         value = event0.get("value")
         title = value.get("Title")
-        # use values to cancel On-Hold process
+        logToFile(f"deviceId: {deviceId} Booking Requested: {title}\n")
+
+def performCommand(type):
+    if type == "sendMsg":
+        token = manageTokens.getToken()
+        logToFile(f"token: {token}")
 
 def verify_jwt(token):
     unverified = jwt.decode(token, options={"verify_signature": False})
@@ -69,6 +89,11 @@ def verify_jwt(token):
     if claims.get("action") != "provision" and time.time() - claims.get("iat", 0) > 300:
         raise jwt.InvalidTokenError("JWT too old")
     return claims
+
+def logToFile(message):
+    epoch_seconds = time.time()
+    with open("output.txt", "a", encoding="utf-8") as file:
+            file.write(f"{epoch_seconds}: {message}\n")
 
 if __name__ == "__main__":
     app.run(debug=False)
