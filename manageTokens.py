@@ -4,9 +4,13 @@ import os
 import json
 from dotenv import load_dotenv, set_key
 
+load_dotenv()
+
 def getToken():
+    logToFile("gettingToken")
     accessToken = os.environ.get('ACCESS_TOKEN')
     accessTokenExpiresAt = int(os.environ.get('ACCESS_TOKEN_EXPIRES_AT'))
+    logToFile(f"expires: {accessTokenExpiresAt}")
     timeNow = int(time.time())
     if timeNow < accessTokenExpiresAt:
         return accessToken
@@ -15,6 +19,7 @@ def getToken():
         return newToken
 
 def refreshAccessToken():
+    logToFile("perform refreshAccessToken")
     clientId = os.environ.get('CLIENT_ID')
     clientSecret = os.environ.get('CLIENT_SECRET')
     refreshToken = os.environ.get('REFRESH_TOKEN')
@@ -47,7 +52,6 @@ def updateEnv(accessToken, expiresIn, refreshToken, refreshTokenExpiresIn):
     timeNow = int(time.time())
     expiresAt = timeNow + expiresIn
     refreshExpiresAt = timeNow + refreshTokenExpiresIn
-  
     dotenv_path = '.env'
     set_key(dotenv_path, "ACCESS_TOKEN", accessToken)
     set_key(dotenv_path, "ACCESS_TOKEN_EXPIRES_AT", str(expiresAt))
