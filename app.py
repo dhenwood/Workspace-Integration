@@ -1,13 +1,8 @@
 from flask import Flask, request, jsonify, render_template
-import logging
-import time
-import jwt
+import logging, time, jwt, os
 from jwt import PyJWKClient
-from dotenv import load_dotenv
-import os
-import manageTokens
+import webexMsgSend
 
-load_dotenv()
 # Initialize the Flask application
 app = Flask(__name__)
 
@@ -42,13 +37,10 @@ def processJson(message):
         processEvent(message)
         return jsonify({"status": "ok"}), 200
 
-    if message.get("type") == "healthCheck":          # webhook health check
-        return jsonify({"status": "ok"}), 200
-
     if "jwt" in message:                               # actions (healthCheck, update, deprovision)
         claims = verify_jwt(message["jwt"])            # verify signature + appId
         if claims.get("action") == "healthCheck":
-            logToFile("healthCheck\n")
+            logToFile("healthCheck")
             return jsonify({"operationalState": "operational", "tokensState": "valid"}), 200
         return "", 204
 
@@ -62,18 +54,15 @@ def processEvent(event):
     if key == "UserInterface.Message.Prompt.Display":
         value = event0.get("value")
         title = value.get("Title")
-        logToFile(f"deviceId: {deviceId} Display title: {title}\n")
-        performCommand("sendMsg")
+        logToFile(f"deviceId: {deviceId} Display title: {title}")
+        if title == "Cisco Spaces Smart Workspaces":
+            webexMsgSend.toggleOnHold(deviceId, True)
 
     elif key == "Bookings.BookingRequested":
         value = event0.get("value")
         title = value.get("Title")
-        logToFile(f"deviceId: {deviceId} Booking Requested: {title}\n")
-
-def performCommand(type):
-    if type == "sendMsg":
-        token = manageTokens.getToken()
-        logToFile(f"token: {token}")
+        logToFile(f"deviceId: {deviceId} Booking Requested: {title}")
+        webexMsgSend.toggleOnHold(deviceId, False)
 
 def verify_jwt(token):
     unverified = jwt.decode(token, options={"verify_signature": False})
