@@ -7,7 +7,7 @@ import webexMsgSend
 app = Flask(__name__)
 
 ## JWT details - for healthCheck
-APP_ID = "<appId removed>" # sent when integration activated, inside the health check JWT and all messsages
+APP_ID = "<appId removed>" # created by Manifest file. Update the match. Used for JWT token verification
 JWKS_URLS = {
     "us-west-2_r":    "https://xapi-r.wbx2.com/jwks",
     "us-east-2_a":    "https://xapi-a.wbx2.com/jwks",
