@@ -1,26 +1,27 @@
 import time
 import requests, json
 import manageTokens
+from threading import Timer
 
-def toggleOnHold(deviceId, onHoldState):
+def toggleOnHold(deviceId, workspaceId, onHoldState):
+    navDeviceId = isNavigatorStandalone(workspaceId, deviceId)
     if onHoldState:
-        setLedControl = xConfig(deviceId, "Manual")
+        setLedControl = xConfig(navDeviceId, "Manual")
         if setLedControl == 200:
-            ledControlBody = constructLedControlBody()
-            xCommand(deviceId, "UserInterface.LedControl.Color.Set", ledControlBody)
+            t = Timer(5.0, delayedFunction, args=[navDeviceId])
+            t.start() #race condition for changing LED to Manual. Delaying 5sec.
             translationBody = constructTranslationBody()
-            xCommand(deviceId, "UserInterface.Translation.Override.Set", translationBody)
+            xCommand(navDeviceId, "UserInterface.Translation.Override.Set", translationBody)
             background = constructBackground()
-            xCommand(deviceId, "UserInterface.Branding.Upload", background)
+            xCommand(navDeviceId, "UserInterface.Branding.Upload", background)
     else:
-        setLedControl = xConfig(deviceId, "Auto")
+        setLedControl = xConfig(navDeviceId, "Auto")
         if setLedControl == 200:
-            xCommand(deviceId, "UserInterface.Translation.Override.Clear", "")
+            xCommand(navDeviceId, "UserInterface.Translation.Override.Clear", "")
             backgroundDelete = constructDeleteBackground()
-            xCommand(deviceId, "UserInterface.Branding.Delete", backgroundDelete)
+            xCommand(navDeviceId, "UserInterface.Branding.Delete", backgroundDelete)
 
 def xConfig(deviceId, value):
-    logToFile(f"toggleOnHold: {value} of device {deviceId}")
     token = manageTokens.getToken()
     url = f"https://webexapis.com/v1/deviceConfigurations?deviceId={deviceId}"
     headers = {
@@ -39,6 +40,10 @@ def xConfig(deviceId, value):
     return resp.status_code
 
 
+def delayedFunction(deviceId):
+    ledControlBody = constructLedControlBody()
+    xCommand(deviceId, "UserInterface.LedControl.Color.Set", ledControlBody)
+
 def xCommand(deviceId, urlParameter, msgBody):
     try:
         url = f"https://webexapis.com/v1/xapi/command/{urlParameter}"
@@ -48,17 +53,47 @@ def xCommand(deviceId, urlParameter, msgBody):
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         }
-        logToFile(f"msgBody: {msgBody}")
         if msgBody == "":
             payload = {"deviceId": deviceId}
         else:
             payload = {"deviceId": deviceId, **msgBody}
-        logToFile(f"payload: {payload}")
         resp = requests.post(url, headers=headers, json=payload)
         logToFile(f"respCode: {resp.status_code}, msg: {resp.json()}")
     except Exception as e:
         logToFile(f"xCommand failed: {e!r}")
         raise
+
+def isNavigatorStandalone(workspaceId, deviceId):
+    url = f"https://webexapis.com/v1/workspaces/{workspaceId}?includeDevices=true"
+    logToFile(f"isNavUrl: {url}")
+    token = manageTokens.getToken()
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(url, headers=headers)
+    json = resp.json()
+    devices = json["devices"]
+    for device in devices:
+        product = device["product"]
+        if product == "Cisco Room Navigator":
+            id = device["id"]
+            outsideNavDetected = isNavigatorOutside(id)
+            if outsideNavDetected:
+                 return id
+    return deviceId
+
+def isNavigatorOutside(id):
+    url = f"https://webexapis.com/v1/xapi/status/?deviceId={id}&name=SystemUnit.TouchPanel.Location"
+    token = manageTokens.getToken()
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = requests.get(url, headers=headers)
+    json = resp.json()
+    result = json["result"]
+    systemUnit = result["SystemUnit"]
+    touchPanel = systemUnit["TouchPanel"]
+    location = touchPanel["Location"]
+    if location == "OutsideRoom":
+        return True
+    else:
+        return False
 
 def constructLedControlBody():
     body = {
@@ -95,4 +130,4 @@ def constructDeleteBackground():
 def logToFile(message):
     epoch_seconds = time.time()
     with open("output.txt", "a", encoding="utf-8") as file:
-    file.write(f"{epoch_seconds}: {message}\n")
+            file.write(f"{epoch_seconds}: {message}\n")
