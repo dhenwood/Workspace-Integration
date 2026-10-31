@@ -6,10 +6,10 @@ This macro updates the Cisco Navigator outside panel to On-Hold (blue) when requ
 ## Options
 There are three options for providing this capability. The differences between each is as follows;
 1. Macro for paired Navigators. When your Navigator is paired (not standalone) to the codec. Note for **MTR's**, most of the features will work however the ability to change the text to "On-Hold" is not available when paired _and_ in MTR mode. [Github repo here](https://github.com/dhenwood/OnHoldMacro)
-2. Macro for Navigators in standalone. In this case, messages between the codec and Navigator are sent via the Webex cloud. For MTR's this option works in full (unlike option 1).
-3. Workspace Integration. This option makes deploying the capability for a large fleet of devices the easiest. It is built on a server and made available for all devices (not requiring deploying the macro to every device). [Github repo here](https://github.com/dhenwood/Workspace-Integration)
+2. Macro for Navigators in standalone. In this case, messages between the codec and Navigator are sent via the Webex cloud. For MTR's this option works in full (unlike option 1). [Github repo here](https://github.com/dhenwood/OnHoldMacroMTR)
+3. Workspace Integration. This option makes deploying the capability for a large fleet of devices the easiest. It is built on a server and made available for all devices (not requiring deploying the macro to every device).
 
-This repo is for option 3 - devices in RoomOS or MTR and irrespective of paired or standalone Navigator.
+This repo is for option 3 - supports devices in RoomOS or MTR and paired or standalone Navigators.
 
 ## Setup
 Documentation on how Workspace integrations works [can be found here](https://developer.webex.com/create/docs/workspace-integrations).
@@ -19,7 +19,7 @@ There are 5 files that make up the integration:
 2. webexMsgSend.py - manages sending messages to the device via Control Hub
 3. manageTokens.py - manages the OAuth tokens and refreshes the tokens when needed
 4. .env - file to store current tokens and duration
-5. manifest file - this file is used to create the integration included desired scopes and is uploaded into Control Hub
+5. manifest file - this file is used to create the integration including desired scopes and is uploaded into Control Hub
 
 ### Setup Workspace Integration
 The manifest.json file contains the details of the integration including the OAuth scopes and permissions. You may wish to change the vendor and email to reflect your own. The [Manifest Editor, found here](https://cisco-ce.github.io/workspace-integrations-editor/) can be used to do this. Save the file to your computer.
@@ -31,7 +31,7 @@ Once processed, the next page will provide a ClientID and ClientSecret. Copy eac
 Once done, you should be on the On-Hold Workspace Integration page. Select the "Actions" button and "Activate". An activation code will be provided. Copy this to clipboard. 
 ![alt text](https://images.contentstack.io/v3/assets/bltd74e2c7e18c68b20/blt71d25a6f2b6ddfe6/64526bc526dc891182facd4a/activation-code.png)
 
-It is a base64 encoded JWT. Online tools such as [jwt.io](https://www.jwt.io/) can be used to decode this, but given it contains your refresh token, you may prefer to do this locally on your computer (MacOS and Windows have tools to do this). The base64 decoded payload should look somthing like the following:
+This is a base64 encoded JWT. Online tools such as [jwt.io](https://www.jwt.io/) can be used to decode this, but given it contains your refresh token, you may prefer to do this locally on your computer (MacOS and Windows have tools to do this). The base64 decoded payload should look somthing like the following:
 ```json
 {
   "sub": "Y2lzY29zcGFyazovL3VybjpURUFNOnVzLWVhc3QtMl9hL09SR0FOSVpBVElPTi80NTkwZWI2YS0yY2EyLTQzOTQtYmMyNy05YjY3MWNlMmZlNzM=",
@@ -71,7 +71,10 @@ Content-Type: application/json
 }
 ```
 
-The response will include a number of values, copy the **access_token**. Using Postman again, construct the following message. Note, you will need to specify the server URL (and directory) for which messages will be sent to. Messages are signed so if you want to validate all messages more details can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation):
+The response will include a number of values, copy the **access_token**. Using Postman again, construct the following message. Note, you will need to specify **your** server URL (and directory) for which messages will be sent to.
+
+Messages are signed so if you want to validate all messages more details can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation). If you don't intend to validate all messages, the below username/password can be anything.
+
 ```http
 PATCH {appUrl_ObtainedInPreviousStep}
 Content-Type: application/json
