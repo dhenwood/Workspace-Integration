@@ -7,10 +7,8 @@ from dotenv import load_dotenv, set_key
 load_dotenv()
 
 def getToken():
-    logToFile("gettingToken")
     accessToken = os.environ.get('ACCESS_TOKEN')
     accessTokenExpiresAt = int(os.environ.get('ACCESS_TOKEN_EXPIRES_AT'))
-    logToFile(f"expires: {accessTokenExpiresAt}")
     timeNow = int(time.time())
     if timeNow < accessTokenExpiresAt:
         return accessToken
@@ -46,7 +44,6 @@ def refreshAccessToken():
         logToFile(f"refreshAccessToken failed: {e!r}")
         raise
 
-
 def updateEnv(accessToken, expiresIn, refreshToken, refreshTokenExpiresIn):
     #open .env and write updated values
     timeNow = int(time.time())
@@ -58,7 +55,6 @@ def updateEnv(accessToken, expiresIn, refreshToken, refreshTokenExpiresIn):
     set_key(dotenv_path, "REFRESH_TOKEN", refreshToken)
     set_key(dotenv_path, "REFRESH_TOKEN_EXPIRES_AT", str(refreshExpiresAt))
     load_dotenv(dotenv_path)
-
 
 def logToFile(message):
     epoch_seconds = time.time()
