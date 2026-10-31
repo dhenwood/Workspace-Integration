@@ -14,12 +14,13 @@ This repo is for option 3 - supports devices in RoomOS or MTR and paired or stan
 ## Setup
 Documentation on how Workspace integrations works [can be found here](https://developer.webex.com/create/docs/workspace-integrations).
 
-There are 5 files that make up the integration:
-1. app.py - manages inbound messages including healthCheck JWT and its response
-2. webexMsgSend.py - manages sending messages to the device via Control Hub
-3. manageTokens.py - manages the OAuth tokens and refreshes the tokens when needed
-4. .env - file to store current tokens and duration
-5. manifest file - this file is used to create the integration including desired scopes and is uploaded into Control Hub
+The integration is made up of:
+1. app.py - receives webhooks and actions from Webex, checks they are genuine, and responds to healthCheck
+2. webex.py - sends the commands that put the outside Navigator on hold (and back) via the Webex API
+3. tokens.py - manages the OAuth tokens and refreshes them when needed
+4. assets/onhold_background.png - the blue background shown while on hold
+5. .env.example - template for the `.env` file that stores your credentials and current tokens
+6. manifest.json - used to create the integration (including the scopes it needs) and is uploaded into Control Hub
 
 ### Setup Workspace Integration
 The manifest.json file contains the details of the integration including the OAuth scopes and permissions. You may wish to change the vendor and email to reflect your own. The [Manifest Editor, found here](https://cisco-ce.github.io/workspace-integrations-editor/) can be used to do this. Save the file to your computer.
@@ -48,7 +49,7 @@ This is a base64 encoded JWT. Online tools such as [jwt.io](https://www.jwt.io/)
   "region": "us-east-2_a",
   "iat": 1691568153,
   "jti": "KqBo61g8SzmjcMP3CEYDPA==",
-  "refreshToken": "Y2U2MThmYTYtYTExZS00MDczLTg3MDAtYzQ4NmE1MGMzYjNiYTU0NzMxYWUtMGVl_PF84_4590eb6a-2ca2-4394-bc27-9b671ce2fe73",
+  "refreshToken": "<yourRefreshToken>",
   "xapiAccess": "{\"commands\":[\"Message.Send\"],\"statuses\":[\"RoomAnalytics.*\",\"Peripherals.ConnectedDevice[*].RoomAnalytics.*\",\"SystemUnit.State.NumberOfActiveCalls\",\"Standby.State\"],\"events\":[\"UserInterface.Message.Prompt.Response\",\"BootEvent\"]}"
 }
 ```
@@ -73,7 +74,7 @@ Content-Type: application/json
 
 The response will include a number of values, copy the **access_token**. Using Postman again, construct the following message. Note, you will need to specify **your** server URL (and directory) for which messages will be sent to.
 
-Messages are signed so if you want to validate all messages more details can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation). If you don't intend to validate all messages, the below username/password can be anything.
+Choose a username and a strong password for the webhook below. Webex sends them with every event, and the server rejects any event that doesn't include them, so nobody else can trigger the integration. You'll add the same values to the `.env` file later. More details on how messages are secured can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation).
 
 ```http
 PATCH {appUrl_ObtainedInPreviousStep}
@@ -95,15 +96,28 @@ Authorization: Bearer {access_token}
 Once processed, the Control Hub Workspace Integration for On-Hold should appear **Active**
 
 ### Server Details
-1. The following four files need to be put on your web server; app.py, webexMsgSend.py, manageTokens.py and .env
-2. You may wish to change line 25 in the app.py file to specify a different URL directory (match what was specified in the above PATCH)
-3. Edit the following fields in the .env file. **Note**, the AppId can be found in the manifest.json file:
+1. Copy the repo to your web server and install the dependencies (Python 3.9 or later):
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Copy `.env.example` to `.env` and fill in the following fields. **Note**, the AppId can be found in the manifest.json file:
    1. CLIENT_ID
    2. CLIENT_SECRET
    3. REFRESH_TOKEN
    4. APP_ID
-4.   Save the .env file
-5.   Run the app.py using the following command
-```Linux
-flask run --host=0.0.0.0
+   5. WEBHOOK_USERNAME and WEBHOOK_PASSWORD - the same values used in the PATCH above
+   6. WEBHOOK_PATH (optional) - only if you used a path other than `/onholdintegration` in the PATCH above
+3. Keep `.env` private - it holds your secrets and is listed in `.gitignore` so it won't be committed.
+4. Run the app with a production server such as gunicorn, behind HTTPS:
+   ```bash
+   gunicorn --bind 0.0.0.0:8000 app:app
+   ```
+   (`flask run` works for local testing, but it's a development server and shouldn't be exposed to the internet.)
+
+Logs are written to `output.txt` (change with `LOG_FILE` in `.env`).
+
+### Running the tests
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```

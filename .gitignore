@@ -1,0 +1,13 @@
+# Secrets and tokens - never commit
+.env
+
+# Logs
+output.txt
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
