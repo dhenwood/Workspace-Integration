@@ -6,8 +6,7 @@ import webexMsgSend
 # Initialize the Flask application
 app = Flask(__name__)
 
-## JWT details - for healthCheck
-APP_ID = "<appId removed>" # created by Manifest file. Update field to match. Used for JWT token verification
+# JWT details - for healthCheck
 JWKS_URLS = {
     "us-west-2_r":    "https://xapi-r.wbx2.com/jwks",
     "us-east-2_a":    "https://xapi-a.wbx2.com/jwks",
@@ -32,7 +31,6 @@ def rxMessage():
 
 
 def processJson(message):
-    epoch_seconds = time.time()
     if message.get("type") == "events":         # webhook main events
         processEvent(message)
         return jsonify({"status": "ok"}), 200
@@ -47,7 +45,9 @@ def processJson(message):
     return jsonify({"status": "ignored"}), 200
 
 def processEvent(event):
+    logToFile(f"event: {event}")
     deviceId = event.get("deviceId")
+    workspaceId = event.get("workspaceId")
     events = event.get("events")
     event0 = events[0]
     key = event0.get("key")
@@ -55,14 +55,15 @@ def processEvent(event):
         value = event0.get("value")
         title = value.get("Title")
         logToFile(f"deviceId: {deviceId} Display title: {title}")
-        if title == "Cisco Spaces Smart Workspaces":
-            webexMsgSend.toggleOnHold(deviceId, True)
-
+        if title == "Cisco Spaces Smart Workspaces 1":
+            webexMsgSend.toggleOnHold(deviceId, workspaceId, True)
+        elif title == "Cisco Spaces Smart Workspaces 2":
+            webexMsgSend.toggleOnHold(deviceId, workspaceId, False)
     elif key == "Bookings.BookingRequested":
         value = event0.get("value")
         title = value.get("Title")
         logToFile(f"deviceId: {deviceId} Booking Requested: {title}")
-        webexMsgSend.toggleOnHold(deviceId, False)
+        webexMsgSend.toggleOnHold(deviceId, workspaceId, False)
 
 def verify_jwt(token):
     unverified = jwt.decode(token, options={"verify_signature": False})
@@ -73,7 +74,8 @@ def verify_jwt(token):
     claims = jwt.decode(token, key, algorithms=["ES256"],
                         options={"verify_aud": False})
 
-    if claims.get("appId") != APP_ID:
+    appId = os.environ.get('APP_ID')
+    if claims.get("appId") != appId:
         raise jwt.InvalidTokenError("appId mismatch")
     if claims.get("action") != "provision" and time.time() - claims.get("iat", 0) > 300:
         raise jwt.InvalidTokenError("JWT too old")
