@@ -22,11 +22,72 @@ There are 5 files that make up the integration:
 5. manifest file - this file is used to create the integration included desired scopes and is uploaded into Control Hub
 
 ### Setup Workspace Integration
-The manifest.json file contains the details of the integration including the OAuth scopes and permissions. You may however wish to change the vendor and email to reflect your own. The [Manifest Editor found here](https://cisco-ce.github.io/workspace-integrations-editor/) can be used to do this. Save the file to your computer.
+The manifest.json file contains the details of the integration including the OAuth scopes and permissions. You may wish to change the vendor and email to reflect your own. The [Manifest Editor, found here](https://cisco-ce.github.io/workspace-integrations-editor/) can be used to do this. Save the file to your computer.
 In Control Hub under Workspaces -> Integrations, select "Add Integration" then "Upload Integration". Specify the manifest.json file you saved then "Upload".
 
-Once processed, the following page will provide a ClientID and ClientSecret. Copy each of these and **ensure they are saved securely** as the ClientSecret can not be obtained again (the setup process would need to be repeated to obtain a new ClientSecret).
+Once processed, the next page will provide a ClientID and ClientSecret. Copy each of these and 🚨**ensure they are saved securely**🚨 as both cannot be obtained again (the setup process would need to be repeated).
+![alt text](https://images.contentstack.io/v3/assets/bltd74e2c7e18c68b20/blt86782cd1f8590aa6/64526bc5fb3d807d46df80e7/client-id-secret.png)
 
+Once done, you should be on the On-Hold Workspace Integration page. Select the "Actions" button and "Activate". An activation code will be provided. Copy this to clipboard. 
+![alt text](https://images.contentstack.io/v3/assets/bltd74e2c7e18c68b20/blt71d25a6f2b6ddfe6/64526bc526dc891182facd4a/activation-code.png)
+
+It is a base64 encoded JWT. Online tools such as [jwt.io](https://www.jwt.io/) can be used to decode this, but given it contains your refresh token, you may prefer to do this locally on your computer (MacOS and Windows have tools to do this). The base64 decoded payload should look somthing like the following:
+```json
+{
+  "sub": "Y2lzY29zcGFyazovL3VybjpURUFNOnVzLWVhc3QtMl9hL09SR0FOSVpBVElPTi80NTkwZWI2YS0yY2EyLTQzOTQtYmMyNy05YjY3MWNlMmZlNzM=",
+  "oauthUrl": "https://webexapis.com/v1/access_token",
+  "orgName": "CVTG labs",
+  "appUrl": "https://xapi-a.wbx2.com/xapi/api/organizations/4590eb6a-2ca2-4394-bc27-9b671ce2fe73/apps/ac6b6972-538e-11ec-bf63-0242ac130003",
+  "userId": "Y2lzY29zcGFyazovL3VybjpURUFNOnVzLWVhc3QtMl9hL1BFT1BMRS8xYzdmMDQ2YS1jOWRiLTQyZWQtOTFkYi1jNmY4NDVkMWYxNmU=",
+  "manifestUrl": "https://xapi-a.wbx2.com/xapi/api/organizations/4590eb6a-2ca2-4394-bc27-9b671ce2fe73/appManifests/ac6b6972-538e-11ec-bf63-0242ac130003",
+  "appId": "ac6b6972-538e-11ec-bf63-0242ac130003",
+  "expiryTime": "2023-08-10T08:02:33.816114574Z",
+  "action": "provision",
+  "webexapisBaseUrl": "https://webexapis.com/v1",
+  "scopes": "spark-admin:devices_read,spark:xapi_statuses,spark-admin:workspaces_read,spark:xapi_commands",
+  "region": "us-east-2_a",
+  "iat": 1691568153,
+  "jti": "KqBo61g8SzmjcMP3CEYDPA==",
+  "refreshToken": "Y2U2MThmYTYtYTExZS00MDczLTg3MDAtYzQ4NmE1MGMzYjNiYTU0NzMxYWUtMGVl_PF84_4590eb6a-2ca2-4394-bc27-9b671ce2fe73",
+  "xapiAccess": "{\"commands\":[\"Message.Send\"],\"statuses\":[\"RoomAnalytics.*\",\"Peripherals.ConnectedDevice[*].RoomAnalytics.*\",\"SystemUnit.State.NumberOfActiveCalls\",\"Standby.State\"],\"events\":[\"UserInterface.Message.Prompt.Response\",\"BootEvent\"]}"
+}
+```
+
+The following three items need to be saved
+* oauthUrl
+* appUrl
+* refreshToken
+
+Using [Postman](https://www.postman.com/) or equivalant, construct the following message:
+```http
+POST {appUrl_ObtainedInPreviousStep}
+Content-Type: application/json
+
+{
+  "grant_type": "refresh_token",
+  "client_id": "{clientId_ObtainedEarlier}",
+  "client_secret": "{clientSecret_ObtainedEarlier}",
+  "refresh_token": "{refreshToken_ObtainedInPreviousStep}"
+}
+```
+
+The response will include a number of values, copy the **access_token**. Using Postman again, construct the following message. Note, you will need to specify the server URL (and directory) for which messages will be sent to. Messages are signed so if you want to validate all messages more details can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation):
+```http
+PATCH {oauthUrl_ObtainedInPreviousStep}
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "provisioningState": "completed",
+  "actionsUrl": "https://talk2spark.com/onholdintegration",
+  "webhook": {
+    "targetUrl": "https://talk2spark.com/onholdintegration",
+    "type": "basic_authentication",
+    "username": "{userName}",
+    "password": "{password}"
+  }
+}
+```
 
 
 ### Server Details
