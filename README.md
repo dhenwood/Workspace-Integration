@@ -20,3 +20,17 @@ There are 5 files that make up the integration:
 3. manageTokens.py - manages the OAuth tokens and refreshes the tokens when needed
 4. .env - file to store current tokens and duration
 5. manifest file - this file is used to create the integration included desired scopes and is uploaded into Control Hub
+
+### Setup Workspace Integration
+The manifest.json file contains the details of the integration including the OAuth scopes and permissions. You may however wish to change the vendor and email to reflect your own. The [Manifest Editor found here](https://cisco-ce.github.io/workspace-integrations-editor/) can be used to do this. Save the file to your computer.
+In Control Hub under Workspaces -> Integrations, select "Add Integration" then "Upload Integration". Specify the manifest.json file you saved then "Upload".
+
+Once processed, the following page will provide a ClientID and ClientSecret. Copy each of these and **ensure they are saved securely** as the ClientSecret can not be obtained again (the setup process would need to be repeated to obtain a new ClientSecret).
+
+
+
+### Server Details
+
+1. The following four files need to be put on your web server; app.py, webexMsgSend.py, manageTokens.py and .env
+2. You may wish to change line 25 in the app.py file to specify a different URL destination (currently /onholdintegration)
+3. 
