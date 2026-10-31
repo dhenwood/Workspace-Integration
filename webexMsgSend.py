@@ -36,7 +36,6 @@ def xConfig(deviceId, value):
     }
     ]
     resp = requests.patch(url, headers=headers, json=payload)
-    logToFile(f"respCode0: {resp.status_code}")
     return resp.status_code
 
 
@@ -47,7 +46,6 @@ def delayedFunction(deviceId):
 def xCommand(deviceId, urlParameter, msgBody):
     try:
         url = f"https://webexapis.com/v1/xapi/command/{urlParameter}"
-        logToFile(f"xCommand Url: {url}")
         token = manageTokens.getToken()
         headers = {
         "Authorization": f"Bearer {token}",
@@ -58,42 +56,41 @@ def xCommand(deviceId, urlParameter, msgBody):
         else:
             payload = {"deviceId": deviceId, **msgBody}
         resp = requests.post(url, headers=headers, json=payload)
-        logToFile(f"respCode: {resp.status_code}, msg: {resp.json()}")
     except Exception as e:
         logToFile(f"xCommand failed: {e!r}")
         raise
 
 def isNavigatorStandalone(workspaceId, deviceId):
     url = f"https://webexapis.com/v1/workspaces/{workspaceId}?includeDevices=true"
-    logToFile(f"isNavUrl: {url}")
     token = manageTokens.getToken()
     headers = {"Authorization": f"Bearer {token}"}
     resp = requests.get(url, headers=headers)
-    json = resp.json()
-    devices = json["devices"]
+    data = resp.json()
+    devices = data["devices"]
     for device in devices:
         product = device["product"]
         if product == "Cisco Room Navigator":
-            id = device["id"]
-            outsideNavDetected = isNavigatorOutside(id)
-            if outsideNavDetected:
-                 return id
+            navId = device["id"]
+            if isNavigatorOutside(navId):  # None and False both skip
+                return navId
     return deviceId
 
 def isNavigatorOutside(id):
     url = f"https://webexapis.com/v1/xapi/status/?deviceId={id}&name=SystemUnit.TouchPanel.Location"
     token = manageTokens.getToken()
     headers = {"Authorization": f"Bearer {token}"}
-    resp = requests.get(url, headers=headers)
-    json = resp.json()
-    result = json["result"]
-    systemUnit = result["SystemUnit"]
-    touchPanel = systemUnit["TouchPanel"]
-    location = touchPanel["Location"]
-    if location == "OutsideRoom":
-        return True
-    else:
-        return False
+    try:
+        resp = requests.get(url, headers=headers)
+        data = resp.json()
+        if not resp.ok:
+            logToFile(f"Skipping device {id}: {data.get('message', resp.status_code)}")
+            return None
+        location = data["result"]["SystemUnit"]["TouchPanel"]["Location"]
+        if location == "OutsideRoom":
+            return True
+    except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+        logToFile(f"Skipping device {id}: {e}")
+        return None
 
 def constructLedControlBody():
     body = {
