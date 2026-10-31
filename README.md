@@ -60,7 +60,7 @@ The following three items need to be saved
 
 Using [Postman](https://www.postman.com/) or equivalant, construct the following message:
 ```http
-POST {appUrl_ObtainedInPreviousStep}
+POST {oauthUrl_ObtainedInPreviousStep}
 Content-Type: application/json
 
 {
@@ -73,15 +73,15 @@ Content-Type: application/json
 
 The response will include a number of values, copy the **access_token**. Using Postman again, construct the following message. Note, you will need to specify the server URL (and directory) for which messages will be sent to. Messages are signed so if you want to validate all messages more details can be [found here](https://developer.webex.com/create/docs/workspace-integration-technical-details#activation):
 ```http
-PATCH {oauthUrl_ObtainedInPreviousStep}
+PATCH {appUrl_ObtainedInPreviousStep}
 Content-Type: application/json
 Authorization: Bearer {access_token}
 
 {
   "provisioningState": "completed",
-  "actionsUrl": "https://talk2spark.com/onholdintegration",
+  "actionsUrl": "{yourWebServer.com/onholdintegration}",
   "webhook": {
-    "targetUrl": "https://talk2spark.com/onholdintegration",
+    "targetUrl": "{yourWebServer.com/onholdintegration}",
     "type": "basic_authentication",
     "username": "{userName}",
     "password": "{password}"
@@ -89,9 +89,18 @@ Authorization: Bearer {access_token}
 }
 ```
 
+Once processed, the Control Hub Workspace Integration for On-Hold should appear **Active**
 
 ### Server Details
-
 1. The following four files need to be put on your web server; app.py, webexMsgSend.py, manageTokens.py and .env
-2. You may wish to change line 25 in the app.py file to specify a different URL destination (currently /onholdintegration)
-3. 
+2. You may wish to change line 25 in the app.py file to specify a different URL directory (match what was specified in the above PATCH)
+3. Edit the following fields in the .env file. **Note**, the AppId can be found in the manifest.json file:
+   1. CLIENT_ID
+   2. CLIENT_SECRET
+   3. REFRESH_TOKEN
+   4. APP_ID
+4.   Save the .env file
+5.   Run the app.py using the following command
+```Linux
+flask run --host=0.0.0.0
+```
