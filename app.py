@@ -55,10 +55,8 @@ def processEvent(event):
         value = event0.get("value")
         title = value.get("Title")
         logToFile(f"deviceId: {deviceId} Display title: {title}")
-        if title == "Cisco Spaces Smart Workspaces 1":
+        if title == "Cisco Spaces Smart Workspaces":
             webexMsgSend.toggleOnHold(deviceId, workspaceId, True)
-        elif title == "Cisco Spaces Smart Workspaces 2":
-            webexMsgSend.toggleOnHold(deviceId, workspaceId, False)
     elif key == "Bookings.BookingRequested":
         value = event0.get("value")
         title = value.get("Title")
